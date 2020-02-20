@@ -31,13 +31,46 @@ I imported the data, cleaned the variable names, and converted our outcome of in
 alc = read_csv("./data/alcohol_use.csv") %>% 
   janitor::clean_names() %>% 
   mutate(
-    alc_outcome = as.factor(alc_consumption)
-  )
+    alc_outcome = case_when(
+      alc_consumption == "CurrentUse" ~ 1, 
+      alc_consumption == "NotCurrentUse" ~ 0), 
+    alc_outcome = as.factor(alc_outcome)) %>% 
+  select(-alc_consumption)
 
 head(alc)
 
-
 train_alc = alc %>% sample_frac(.7)
 test_alc = anti_join(alc, train_alc, by = 'x1')
+```
+
+### 1. Create and Compare Models
+
+#### Model 1: 
+
+```{r}
+# Apply to Model1
+model1 = train(
+    alc_outcome ~., 
+    data = train_alc,
+    method = "glmnet",
+    family = "binomial",
+    trControl = trainControl("cv", number = 10)
+  )
+
+# Test performance
+results1 = predict(model1, test_alc, type = 'prob')
+results_prob1 = ifelse(results1 > 0.5,1,0)
+
+outcome1 = (as.numeric(test_alc$alc_outcome))
+
+testProbs =  data.frame(obs = test_alc$alc_outcome,
+                        pred.logit=results_prob1)
+
+missclass1 = mean(results_prob1 != outcome1, na.rm = T)
+print(paste('Accuracy Model 1',1 - missclass1))
+
+calPlotData = calibration(obs ~ pred.logit.1, data = testProbs, cuts=5)
+
+xyplot(calPlotData, auto.key = list(columns = 2))
 ```
 
