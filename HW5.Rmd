@@ -45,7 +45,7 @@ test_alc = anti_join(alc, train_alc, by = 'x1')
 
 ### 1. Create and Compare Models
 
-#### Model 1: 
+#### Model 1: Use Caret package to choose alpha and lambda
 
 ```{r}
 # Apply to Model1
@@ -58,19 +58,72 @@ model1 = train(
   )
 
 # Test performance
-results1 = predict(model1, test_alc, type = 'prob')
+results1 = predict(model1, 
+                   test_alc, 
+                   type = 'prob')
+
 results_prob1 = ifelse(results1 > 0.5,1,0)
 
-outcome1 = (as.numeric(test_alc$alc_outcome))
+outcome1 = (as.numeric(test_alc$alc_outcome) - 1)
 
-testProbs =  data.frame(obs = test_alc$alc_outcome,
-                        pred.logit=results_prob1)
+testProbs1 =  data.frame(obs = test_alc$alc_outcome,
+                        pred.logit = results_prob1)
 
-missclass1 = mean(results_prob1 != outcome1, na.rm = T)
+missclass1 = mean(
+  results_prob1 != outcome1, 
+  na.rm = T)
+
 print(paste('Accuracy Model 1',1 - missclass1))
 
-calPlotData = calibration(obs ~ pred.logit.1, data = testProbs, cuts=5)
+calPlotData1 = calibration(
+  obs ~ pred.logit.1, 
+  data = testProbs1, 
+  cuts = 5)
 
-xyplot(calPlotData, auto.key = list(columns = 2))
+xyplot(calPlotData1, 
+       auto.key = list(columns = 2))
 ```
+
+#### Model 2: Logistic Regression
+
+```{r}
+# Apply to Model1
+model2 = glm(
+    alc_outcome ~., 
+    family = binomial(link = 'logit'),
+    data = train_alc
+  )
+
+# Test performance
+results2 = predict(model2, 
+                   test_alc, 
+                   type = 'response')
+
+results_prob2 = ifelse(results2 > 0.5,1,0)
+
+outcome2 = (as.numeric(test_alc$alc_outcome) - 1)
+
+testProbs2 = data.frame(obs = test_alc$alc_outcome,
+                        pred.logit = results_prob2)
+
+missclass2 = mean(
+  results_prob2 != outcome2, 
+  na.rm = T)
+
+print(paste('Accuracy Model 2',1 - missclass2))
+
+calPlotData2 = calibration(
+  obs ~ pred.logit, 
+  data = testProbs2, 
+  cuts = 5)
+
+xyplot(calPlotData2, auto.key = list(columns = 2))
+
+```
+
+
+
+
+
+
 
