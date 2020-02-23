@@ -117,13 +117,65 @@ calPlotData2 = calibration(
   data = testProbs2, 
   cuts = 5)
 
-xyplot(calPlotData2, auto.key = list(columns = 2))
-
+xyplot(calPlotData2, 
+       auto.key = list(columns = 2))
 ```
 
+#### Model 3: LASSO using CARET package
 
+```{r}
+# Apply to Model3
+lambda = 10^seq(-3,3, length = 100)
 
+model3 = train(
+    alc_outcome ~., 
+    data = train_alc,
+    method = "glmnet",
+    family = "binomial",
+    trControl = trainControl("cv", number = 10), 
+    tuneGrid = expand.grid(alpha = 1, lambda = lambda))
 
+# Test performance
+results3 = predict(model3, 
+                   test_alc, 
+                   type = 'prob')
 
+results_prob3 = ifelse(results3 > 0.5,1,0)
 
+outcome3 = (as.numeric(test_alc$alc_outcome) - 1)
+
+testProbs3 = data.frame(obs = test_alc$alc_outcome,
+                        pred.logit = results_prob3)
+
+missclass3 = mean(
+  results_prob3 != outcome3, 
+  na.rm = T)
+
+print(paste('Accuracy Model 3',1 - missclass3))
+
+calPlotData3 = calibration(
+  obs ~ pred.logit.1, 
+  data = testProbs3, 
+  cuts = 5)
+
+xyplot(calPlotData3, 
+       auto.key = list(columns = 2))
+```
+
+### 2. Compare Performace of Each Model
+
+Accuracy of each model: 
+
+```{r}
+performance = 
+  tibble(
+    "Accuracy Model 1" = c(1 - missclass1), 
+    "Accuracy Model 2" = c(1 - missclass2), 
+    "Accuracy Model 3" = c(1 - missclass3)
+   ) %>% knitr::kable()
+
+performance
+```
+
+Using the above output, I would choose Model 2 which used standard logistic regression to predict. 
 
