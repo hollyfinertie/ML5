@@ -40,15 +40,19 @@ alc = read_csv("./data/alcohol_use.csv") %>%
 head(alc)
 
 train_alc = alc %>% sample_frac(.7)
-test_alc = anti_join(alc, train_alc, by = 'x1')
+test_alc = anti_join(alc, train_alc, by = 'x1') %>% 
+  select(-x1)
+
+train_alc = train_alc %>% 
+  select(-x1)
 ```
 
-### 1. Create and Compare Models
+### 1. Create Models
 
-#### Model 1: Use Caret package to choose alpha and lambda
+#### Model 1: Use Caret to choose alpha and lambda
 
-```{r}
-# Apply to Model1
+```{r, model1}
+# Create model 1
 model1 = train(
     alc_outcome ~., 
     data = train_alc,
@@ -73,21 +77,14 @@ missclass1 = mean(
   results_prob1 != outcome1, 
   na.rm = T)
 
-print(paste('Accuracy Model 1',1 - missclass1))
+accuracy1 = print(1 - missclass1)
 
-calPlotData1 = calibration(
-  obs ~ pred.logit.1, 
-  data = testProbs1, 
-  cuts = 5)
-
-xyplot(calPlotData1, 
-       auto.key = list(columns = 2))
 ```
 
 #### Model 2: Logistic Regression
 
-```{r}
-# Apply to Model1
+```{r, model2}
+# Create model2
 model2 = glm(
     alc_outcome ~., 
     family = binomial(link = 'logit'),
@@ -110,21 +107,14 @@ missclass2 = mean(
   results_prob2 != outcome2, 
   na.rm = T)
 
-print(paste('Accuracy Model 2',1 - missclass2))
+accuracy2 = print(1 - missclass2)
 
-calPlotData2 = calibration(
-  obs ~ pred.logit, 
-  data = testProbs2, 
-  cuts = 5)
-
-xyplot(calPlotData2, 
-       auto.key = list(columns = 2))
 ```
 
 #### Model 3: LASSO using CARET package
 
-```{r}
-# Apply to Model3
+```{r, model3}
+# Create model 3
 lambda = 10^seq(-3,3, length = 100)
 
 model3 = train(
@@ -151,31 +141,30 @@ missclass3 = mean(
   results_prob3 != outcome3, 
   na.rm = T)
 
-print(paste('Accuracy Model 3',1 - missclass3))
+accuracy3 = print(1 - missclass3)
 
-calPlotData3 = calibration(
-  obs ~ pred.logit.1, 
-  data = testProbs3, 
-  cuts = 5)
-
-xyplot(calPlotData3, 
-       auto.key = list(columns = 2))
 ```
 
-### 2. Compare Performace of Each Model
+### 2. Compare Model Performace 
 
 Accuracy of each model: 
 
-```{r}
+```{r, performance}
 performance = 
   tibble(
-    "Accuracy Model 1" = c(1 - missclass1), 
-    "Accuracy Model 2" = c(1 - missclass2), 
-    "Accuracy Model 3" = c(1 - missclass3)
-   ) %>% knitr::kable()
+    "Model 1" = c(round(accuracy1, digits = 3)), 
+    "Model 2" = c(round(accuracy2, digits = 3)), 
+    "Model 3" = c(round(accuracy3, digits = 3))
+    ) %>% knitr::kable()
 
 performance
 ```
 
-Using the above output, I would choose Model 2 which used standard logistic regression to predict. 
+Using the above output, I would choose Model 2 which used standard logistic regression. Not only is this computationally less intensive, but it has the highest prediction accuracy. This model also only has 7 parameters, so feature selection is not a high priority. 
+
+
+### 4. Question
+a) Directly address: We were able to identify a model that accurately (77%) explained alcohol use in the past month using 7 personality features. We can answer: are personality traits associated with alcohol use in the past month among the study sample? 
+
+b) Indirectly address: Future researchers could identify more personality characteristics that are associated with alcohol use. With this information, they could create a personality index that accurately predicts alcohol use. This could be used to identify individuals that may have harmful alcohol behaviors. 
 
